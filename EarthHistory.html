@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>30-Day Earth History Calendar</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600&display=swap');
+
+        :root {
+            --bg-color: #050510;
+            --grid-bg: #0b0d17;
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ea;
+            --neon-green: #39ff14;
+            --neon-yellow: #fffb00;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: #ffffff;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 243, 255, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(255, 0, 234, 0.08) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        header {
+            text-align: center;
+            padding: 3rem 1rem;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: transparent;
+            -webkit-text-stroke: 1px var(--neon-blue);
+            text-shadow: 0 0 15px rgba(0, 243, 255, 0.6);
+            animation: pulse 2s infinite alternate;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--neon-pink);
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 0, 234, 0.5);
+        }
+
+        @keyframes pulse {
+            0% { text-shadow: 0 0 10px rgba(0, 243, 255, 0.4); }
+            100% { text-shadow: 0 0 25px rgba(0, 243, 255, 0.9), 0 0 40px var(--neon-blue); }
+        }
+
+        /* Calendar Grid */
+        .calendar-container {
+            max-width: 1200px;
+            margin: 0 auto 50px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .day-card {
+            background: rgba(11, 13, 23, 0.8);
+            border: 1px solid rgba(0, 243, 255, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(5px);
+            overflow: hidden;
+        }
+
+        .day-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .day-card:hover::before {
+            left: 100%;
+        }
+
+        .day-card:hover {
+            transform: translateY(-5px) scale(1.05);
+            border-color: var(--neon-pink);
+            box-shadow: 0 0 20px rgba(255, 0, 234, 0.6), inset 0 0 10px rgba(255, 0, 234, 0.2);
+            z-index: 10;
+        }
+
+        .day-number {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--neon-blue);
+            margin-bottom: 10px;
+        }
+
+        .day-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        .has-event {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 10px rgba(57, 255, 20, 0.2);
+        }
+
+        .has-event .day-number { color: var(--neon-green); }
+
+        /* Modal / Detail Panel */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #0b0d17, #1a0b2e);
+            border: 2px solid var(--neon-blue);
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 0 40px rgba(0, 243, 255, 0.4);
+            position: relative;
+            transform: translateY(50px) scale(0.9);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px; right: 20px;
+            font-size: 2rem;
+            color: #fff;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-btn:hover {
+            color: var(--neon-pink);
+            text-shadow: 0 0 10px var(--neon-pink);
+        }
+
+        #modal-day {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: var(--neon-yellow);
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(255, 251, 0, 0.5);
+        }
+
+        #modal-time {
+            color: var(--neon-blue);
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.3);
+            padding-bottom: 10px;
+        }
+
+        #modal-desc {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+
+        .timeline-list {
+            margin-top: 20px;
+            list-style-type: none;
+            padding-left: 15px;
+            border-left: 2px solid var(--neon-pink);
+        }
+
+        .timeline-list li {
+            position: relative;
+            margin-bottom: 15px;
+            padding-left: 20px;
+        }
+
+        .timeline-list li::before {
+            content: '';
+            position: absolute;
+            left: -21px; top: 5px;
+            width: 10px; height: 10px;
+            background: var(--neon-pink);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-pink);
+        }
+
+        .highlight-text {
+            color: var(--neon-green);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Earth: The 30-Day Cut</h1>
+        <h2>4.5 Billion Years Compressed. 1 Day = 150 Million Years.</h2>
+    </header>
+
+    <div class="calendar-container" id="calendar">
+        </div>
+
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-modal">&times;</span>
+            <div id="modal-day">Day X</div>
+            <div id="modal-time">X Billion Years Ago</div>
+            <div id="modal-desc">Description goes here...</div>
+        </div>
+    </div>
+
+    <script>
+        // Earth History Data (1 Day = 150 Million Years)
+        const earthData = [
+            { day: 1, title: "The Violent Genesis", time: "4.50 - 4.35 Billion Years Ago", desc: "Earth forms from a swirling disk of dust. Shortly after, a Mars-sized planet named Theia violently collides with Earth. The debris forms a ring of lava in space, which quickly coalesces into our Moon. The Earth's surface is entirely an ocean of glowing magma." },
+            { day: 2, title: "Cooling Magma", time: "4.35 - 4.20 Billion Years Ago", desc: "The Earth begins to cool. The magma ocean slowly solidifies into a thin, fragile crust. Volcanoes furiously pump steam, ammonia, and carbon dioxide into a toxic sky." },
+            { day: 3, title: "The Heavens Fall", time: "4.20 - 4.05 Billion Years Ago", desc: "The Late Heavy Bombardment begins. Millions of asteroids and comets pummel the Earth and Moon. However, these comets bring a precious gift: water ice. Water vapor in the atmosphere begins to condense." },
+            { day: 4, title: "The First Rain", time: "4.05 - 3.90 Billion Years Ago", desc: "It rains for millions of years. The first global oceans form, covering almost the entire planet. The water is green with dissolved iron, and the sky is a heavy, apocalyptic red." },
+            { day: 5, title: "The Spark of Life", time: "3.90 - 3.75 Billion Years Ago", desc: "Deep underwater, near scorching hydrothermal vents, organic chemistry crosses the threshold into biology. The very first single-celled life forms (prokaryotes) emerge in the pitch black." },
+            { day: 6, title: "Microbial Empire", time: "3.75 - 3.60 Billion Years Ago", desc: "Simple life thrives in the toxic oceans. Methanogens begin producing methane, creating a thick greenhouse gas blanket that keeps the early Earth warm despite a faint, young Sun." },
+            { day: 7, title: "Silent Oceans", time: "3.60 - 3.45 Billion Years Ago", desc: "Life remains microscopic. Evolution is slow. The oceans are a vast, churning soup of bacteria sharing DNA to survive." },
+            { day: 8, title: "Solar Power", time: "3.45 - 3.30 Billion Years Ago", desc: "The first bacteria figure out how to use sunlight for energy (anoxygenic photosynthesis). They don't make oxygen yet, but they build the first reefs: microbial mats called stromatolites." },
+            { day: 9, title: "Crustal Shifting", time: "3.30 - 3.15 Billion Years Ago", desc: "Tectonic plates begin to establish their modern, rigid movements. The Earth's interior is still much hotter than today, causing rapid, violent continental drift." },
+            { day: 10, title: "First Continents", time: "3.15 - 3.00 Billion Years Ago", desc: "The first major landmasses, like the supercontinent Vaalbara, break the surface of the global ocean. Land is barren rock, heavily cratered, and completely devoid of life." },
+            { day: 11, title: "Cyanobacteria", time: "3.00 - 2.85 Billion Years Ago", desc: "A mutation occurs: Cyanobacteria evolve oxygenic photosynthesis. They begin drinking sunlight and water, and exhaling a highly reactive, toxic gas: Oxygen." },
+            { day: 12, title: "Rusting Oceans", time: "2.85 - 2.70 Billion Years Ago", desc: "The oxygen produced by cyanobacteria instantly reacts with the vast amounts of iron dissolved in the oceans. The oceans literally rust. Giant layers of iron oxide settle to the sea floor (Banded Iron Formations)." },
+            { day: 13, title: "The Oxygen Crisis", time: "2.70 - 2.55 Billion Years Ago", desc: "The oceans run out of iron to rust. Oxygen begins to bubble up into the atmosphere. For the anaerobic life that ruled Earth, this oxygen is a deadly poison. The first mass extinction occurs." },
+            { day: 14, title: "Great Oxidation", time: "2.55 - 2.40 Billion Years Ago", desc: "Oxygen fills the atmosphere, reacting with the methane blanket. The sky turns from red to blue. Without methane to trap heat, Earth's temperature plummets." },
+            { day: 15, title: "Snowball Earth", time: "2.40 - 2.25 Billion Years Ago", desc: "The Huronian Glaciation hits. Earth becomes a giant snowball. Ice sheets from the poles reach all the way to the equator. Life survives only near underwater volcanoes and ice-cracks." },
+            { day: 16, title: "The Thaw", time: "2.25 - 2.10 Billion Years Ago", desc: "Volcanic activity slowly pumps CO2 back into the atmosphere, eventually breaking the deep freeze. The surviving life emerges into a nutrient-rich, sunny ocean." },
+            { day: 17, title: "The Inner Alien", time: "2.10 - 1.95 Billion Years Ago", desc: "A major evolutionary leap: Endosymbiosis. One bacteria swallows another, but instead of digesting it, they merge. The swallowed bacteria becomes the mitochondria. Complex cells (Eukaryotes) are born!" },
+            { day: 18, title: "The Boring Billion Starts", time: "1.95 - 1.80 Billion Years Ago", desc: "Earth settles into an incredibly stable, unchanging climate. Evolution seemingly hits a plateau. Scientists call this era the 'Boring Billion'." },
+            { day: 19, title: "Slime Rules", time: "1.80 - 1.65 Billion Years Ago", desc: "The continents are barren. The oceans are murky and filled with eukaryotic algae and bacterial slime. The ozone layer begins to form, protecting Earth from UV radiation." },
+            { day: 20, title: "Continental Dance", time: "1.65 - 1.50 Billion Years Ago", desc: "Continents crash and separate in slow motion. The supercontinent Columbia breaks apart. Life is still restricted to single cells." },
+            { day: 21, title: "Algal Blooms", time: "1.50 - 1.35 Billion Years Ago", desc: "Red and green algae begin to diversify. The blueprint for complex plant life is quietly being written in the shallow coastal waters." },
+            { day: 22, title: "Multicellularity", time: "1.35 - 1.20 Billion Years Ago", desc: "Cells finally discover teamwork. The first simple multicellular organisms appear. True sexual reproduction evolves, drastically speeding up the rate of evolution." },
+            { day: 23, title: "Rodinia Forms", time: "1.20 - 1.05 Billion Years Ago", desc: "A massive, barren supercontinent called Rodinia dominates one side of the globe, surrounded by a single super-ocean called Mirovia." },
+            { day: 24, title: "Ozone Shield", time: "1.05 - 0.90 Billion Years Ago", desc: "The ozone layer becomes thick enough to block deadly UV rays, paving the way for life to eventually leave the safety of the deep water." },
+            { day: 25, title: "Cryogenian Freeze", time: "0.90 - 0.75 Billion Years Ago", desc: "Rodinia breaks apart, altering ocean currents and causing carbon to plummet. Earth plunges into its second, most severe 'Snowball Earth' phase. Glaciers cover the tropics." },
+            { day: 26, title: "Alien Seas", time: "750 - 600 Million Years Ago", desc: "The ice melts. The Ediacaran Biota appears: strange, soft-bodied, fractal-like organisms that look like living rugs, fronds, and tubes. They have no mouths or heads, absorbing nutrients from the water." },
+            { day: 27, title: "Cambrian Explosion!", time: "600 - 450 Million Years Ago", desc: "Biology goes wild. Eyes, teeth, armor, and legs evolve! The oceans are terrifying and beautiful, ruled by giant shrimp-like predators (Anomalocaris) and armored trilobites. The first fish with backbones appear." },
+            { day: 28, title: "The Green Land", time: "450 - 300 Million Years Ago", desc: "Plants conquer the land, followed by giant scorpions and millipedes. In the Carboniferous period, massive rainforests cover Earth. Oxygen levels hit 35%, allowing insects (like dragonflies the size of eagles) to grow massive. Amphibians crawl onto land." },
+            { day: 29, title: "Death & Dinosaurs", time: "300 - 150 Million Years Ago", desc: "The day starts with the 'Great Dying'—supervolcanoes in Siberia wipe out 90% of all life. From the ashes, reptiles evolve into the very first Dinosaurs. The supercontinent Pangea begins to break apart." },
+            { day: 30, title: "The Finale", time: "The Last 150 Million Years", desc: `
+                <ul class="timeline-list">
+                    <li><span class="highlight-text">Morning:</span> Giant Sauropods and T-Rex rule. First birds and small mammals hide in the shadows.</li>
+                    <li><span class="highlight-text">1:26 PM (66 Ma):</span> A 6-mile-wide asteroid hits the Yucatan. Dinosaurs go extinct. Mammals inherit the Earth.</li>
+                    <li><span class="highlight-text">11:15 PM (15 Ma):</span> The first Great Apes appear in Africa.</li>
+                    <li><span class="highlight-text">11:58 PM (300k Yrs):</span> Anatomically modern humans arrive.</li>
+                    <li><span class="highlight-text">11:59:30 PM:</span> Agriculture begins.</li>
+                    <li><span class="highlight-text">11:59:59 PM:</span> The Industrial Revolution, Spaceflight, and the Internet.</li>
+                </ul>
+            ` }
+        ];
+
+        const calendar = document.getElementById('calendar');
+        const modal = document.getElementById('modal');
+        const closeModal = document.getElementById('close-modal');
+        const modalDay = document.getElementById('modal-day');
+        const modalTime = document.getElementById('modal-time');
+        const modalDesc = document.getElementById('modal-desc');
+
+        // Render Calendar
+        earthData.forEach(data => {
+            const card = document.createElement('div');
+            card.className = `day-card ${data.day > 26 ? 'has-event' : ''}`;
+            
+            card.innerHTML = `
+                <div class="day-number">Day ${data.day}</div>
+                <div class="day-title">${data.title}</div>
+            `;
+
+            card.addEventListener('click', () => {
+                modalDay.textContent = `Day ${data.day}: ${data.title}`;
+                modalTime.textContent = data.time;
+                modalDesc.innerHTML = data.desc;
+                modal.classList.add('active');
+            });
+
+            calendar.appendChild(card);
+        });
+
+        // Close Modal Handlers
+        closeModal.addEventListener('click', () => {
+            modal.classList.remove('active');
+        });
+
+        modal.addEventListener('click', (e) => {
+            if(e.target === modal) {
+                modal.classList.remove('active');
+            }
+        });
+
+        // ESC key to close modal
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Escape" && modal.classList.contains('active')) {
+                modal.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
