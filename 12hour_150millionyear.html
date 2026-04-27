@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Earth History Clock — Last 150 Million Years</title>
+<style>
+  :root {
+    --bg0: #030712;
+    --bg1: #08101f;
+    --bg2: #0b1630;
+    --panel: rgba(9, 16, 31, 0.82);
+    --panel2: rgba(12, 20, 39, 0.88);
+    --stroke: rgba(255,255,255,0.10);
+    --text: #eef4ff;
+    --muted: #9fb0cf;
+    --accent: #7dd3fc;
+    --accent2: #c084fc;
+    --accent3: #34d399;
+    --accent4: #fbbf24;
+    --danger: #fb7185;
+    --shadow: 0 18px 60px rgba(0,0,0,0.45);
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: auto; /* FIX: allow full clock visibility */
+    color: var(--text);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(124,58,237,0.20), transparent 22%),
+      radial-gradient(circle at 80% 18%, rgba(14,165,233,0.14), transparent 20%),
+      radial-gradient(circle at 50% 60%, rgba(16,185,129,0.08), transparent 30%),
+      linear-gradient(180deg, var(--bg0), var(--bg1) 42%, #050816 100%);
+  }
+
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(circle at 10% 20%, rgba(255,255,255,0.55) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 25% 65%, rgba(255,255,255,0.36) 0 1px, transparent 1.6px),
+      radial-gradient(circle at 43% 14%, rgba(255,255,255,0.45) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 74% 25%, rgba(255,255,255,0.42) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 87% 72%, rgba(255,255,255,0.34) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 60% 84%, rgba(255,255,255,0.24) 0 1px, transparent 1.5px);
+    opacity: 0.75;
+    animation: twinkle 7s linear infinite;
+  }
+  @keyframes twinkle { 0%,100%{opacity:.6} 50%{opacity:1} }
+
+  .app {
+    position: relative;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 14px;
+    padding: 16px;
+  }
+
+  .topbar,
+  .bottombar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--stroke);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(9,16,31,0.9), rgba(6,11,22,0.78));
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(16px);
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-size: clamp(18px, 2.1vw, 30px);
+    letter-spacing: 0.02em;
+  }
+  .brand p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.09);
+    background: rgba(255,255,255,0.04);
+    color: #f6fbff;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .badge .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+  .badge:nth-child(2) .dot { background: var(--accent2); box-shadow: 0 0 12px var(--accent2); }
+  .badge:nth-child(3) .dot { background: var(--accent3); box-shadow: 0 0 12px var(--accent3); }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    min-height: 0;
+  }
+
+  .clockCard,
+  .infoCard {
+    min-height: 0;
+    border: 1px solid var(--stroke);
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(8,14,27,0.94), rgba(5,9,18,0.92));
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px);
+    overflow: hidden;
+  }
+
+  .clockCard {
+    position: relative;
+    display: grid;
+    place-items: center;
+    padding: 14px;
+  }
+
+  .clockWrap {
+    width: min(90vw, 720px); /* FIX: responsive scaling */
+    aspect-ratio: 1 / 1;
+    position: relative;
+    margin: auto;
+    touch-action: none;
+    user-select: none;
+  }
+
+  svg { width: 100%; height: 100%; overflow: visible; }
+
+  .infoCard {
+    display: grid;
+    grid-template-rows: auto auto auto 1fr auto;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .sectionTitle {
+    margin: 0;
+    color: #bfd4ff;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .heroBox {
+    padding: 16px;
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(125,211,252,0.12), rgba(192,132,252,0.08));
+    border: 1px solid rgba(125,211,252,0.18);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  .heroBox h2 {
+    margin: 0 0 8px;
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .heroBox p {
+    margin: 0;
+    color: #d9e6ff;
+    line-height: 1.55;
+    font-size: 14px;
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .metric {
+    padding: 12px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .metric .label {
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .metric .value {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
+  .metric .sub {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  .controlRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 2px;
+  }
+
+  button, input, select { font: inherit; }
+
+  .btn {
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text);
+    background: rgba(255,255,255,0.06);
+    padding: 10px 14px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform .15s ease, background .15s ease, border-color .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); background: rgba(255,255,255,0.09); }
+  .btn.primary { background: rgba(125,211,252,0.18); border-color: rgba(125,211,252,0.32); }
+  .btn.active { background: rgba(52,211,153,0.16); border-color: rgba(52,211,153,0.35); }
+
+  .sliderWrap {
+    display: grid;
+    gap: 6px;
+    min-width: 220px;
+    flex: 1 1 220px;
+  }
+  .sliderWrap label { color: var(--muted); font-size: 12px; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+  .detailCard {
+    padding: 14px;
+    border-radius: 22px;
+    background: var(--panel2);
+    border: 1px solid rgba(255,255,255,0.08);
+    overflow: auto;
+  }
+
+  .detailCard h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+  }
+  .detailCard p {
+    margin: 0 0 10px;
+    line-height: 1.6;
+    color: #dfe9ff;
+    font-size: 14px;
+  }
+
+  .eventList {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+  }
+  .eventList li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    cursor: pointer;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .eventList li:hover { transform: translateY(-1px); background: rgba(125,211,252,0.08); }
+  .eventList li.active { background: rgba(125,211,252,0.12); border-color: rgba(125,211,252,0.32); }
+  .eventList .name { color: #fff; font-size: 13px; }
+  .eventList .age { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+  .hint {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+  .glass {
+    filter: drop-shadow(0 18px 20px rgba(0,0,0,0.3));
+  }
+
+  .clockFace { fill: url(#faceGrad); stroke: rgba(255,255,255,0.12); stroke-width: 2; }
+  .ringGlow { filter: url(#softGlow); }
+  .minuteRing { stroke: rgba(255,255,255,0.08); stroke-width: 1.4; fill: none; }
+  .majorRing { stroke: rgba(125,211,252,0.18); stroke-width: 7; fill: none; }
+  .hourNumber {
+    fill: rgba(240,247,255,0.96);
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+  .minorTick { stroke: rgba(255,255,255,0.18); }
+  .majorTick { stroke: rgba(255,255,255,0.55); }
+  .minuteLabel { fill: rgba(255,255,255,0.48); font-size: 10px; }
+  .eventDot { stroke: rgba(255,255,255,0.88); stroke-width: 1; cursor: pointer; }
+  .eventLabel { fill: rgba(250,252,255,0.95); font-size: 10px; font-weight: 700; paint-order: stroke; stroke: rgba(0,0,0,0.55); stroke-width: 3px; }
+  .eventLine { stroke-width: 2; opacity: .95; }
+  .needleGlow { filter: url(#softGlow); }
+  .liveGlow { filter: url(#markerGlow); }
+
+  @media (max-width: 1100px) {
+    html, body { overflow: auto; }
+    .app { height: auto; }
+    .main { grid-template-columns: 1fr; }
+    .clockWrap { width: min(95vw, 600px); }
+  }
+    .app { height: auto; min-height: 100%; overflow: visible; }
+    .main { grid-template-columns: 1fr; }
+    .clockWrap { width: min(94vw, 760px); }
+  }
+</style>
+</head>
+<body>
+<div class="stars"></div>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <h1>Earth History Clock</h1>
+      <p>12-hour clock styling · 60 minute points · last 150 million years compressed into one circle</p>
+    </div>
+    <div class="badges">
+      <span class="badge"><span class="dot"></span> draggable hand</span>
+      <span class="badge"><span class="dot"></span> live timeline info</span>
+      <span class="badge"><span class="dot"></span> event snap + autoplay</span>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="clockCard">
+      <div class="clockWrap" id="clockWrap">
+        <svg viewBox="0 0 800 800" aria-label="Earth history clock">
+          <defs>
+            <radialGradient id="faceGrad" cx="50%" cy="50%" r="60%">
+              <stop offset="0%" stop-color="#13213d"/>
+              <stop offset="62%" stop-color="#0a1222"/>
+              <stop offset="100%" stop-color="#050913"/>
+            </radialGradient>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#7dd3fc"/>
+              <stop offset="45%" stop-color="#c084fc"/>
+              <stop offset="100%" stop-color="#34d399"/>
+            </linearGradient>
+            <linearGradient id="handGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#7dd3fc"/>
+            </linearGradient>
+            <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="7" result="b"/>
+              <feColorMatrix in="b" type="matrix"
+                values="1 0 0 0 0.18  0 1 0 0 0.42  0 0 1 0 0.88  0 0 0 0.85 0" result="g"/>
+              <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="markerGlow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <circle cx="400" cy="400" r="360" fill="rgba(255,255,255,0.02)" />
+          <circle cx="400" cy="400" r="332" class="clockFace glass"/>
+          <circle cx="400" cy="400" r="314" fill="none" stroke="url(#ringGrad)" stroke-width="8" class="ringGlow"/>
+          <circle cx="400" cy="400" r="268" class="minuteRing"/>
+          <circle cx="400" cy="400" r="224" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1.4"/>
+
+          <g id="ticks"></g>
+          <g id="eventLayer"></g>
+          <g id="handLayer"></g>
+
+          <circle cx="400" cy="400" r="16" fill="#f8fbff" filter="url(#softGlow)"/>
+          <circle cx="400" cy="400" r="7" fill="#0b1220"/>
+
+          <circle id="hitArea" cx="400" cy="400" r="360" fill="transparent" style="cursor: grab;"/>
+        </svg>
+      </div>
+    </section>
+
+    <aside class="infoCard">
+      <p class="sectionTitle">Current minute</p>
+      <div class="heroBox">
+        <h2 id="title">Earth is forming</h2>
+        <p id="desc">Drag the minute hand around the clock to explore the last 150 million years. The selected minute updates the explanation panel with a detailed scientific summary.</p>
+      </div>
+
+      <div class="metrics">
+        <div class="metric">
+          <div class="label">Clock time</div>
+          <div class="value" id="clockReadout">12:00:00</div>
+          <div class="sub" id="subClock">150.000 million years ago</div>
+        </div>
+        <div class="metric">
+          <div class="label">Time window</div>
+          <div class="value" id="myaReadout">150.000 Ma</div>
+          <div class="sub" id="nearestReadout">Nearest event: Earth forms</div>
+        </div>
+      </div>
+
+      <div class="controlRow">
+        <button class="btn primary" id="playBtn">Play</button>
+        <button class="btn" id="resetBtn">Reset</button>
+        <button class="btn" id="snapBtn">Snap: Off</button>
+        <button class="btn" id="zoomBtn">Zoom: 150 Ma</button>
+        <div class="sliderWrap">
+          <label for="speedRange">Playback speed</label>
+          <input id="speedRange" type="range" min="0.25" max="4" step="0.05" value="1" />
+        </div>
+      </div>
+
+      <div class="detailCard" id="detailCard">
+        <h3 id="eventName">Earth is forming</h3>
+        <p id="eventDetail">This clock starts at 150 million years ago. The right panel shows the nearest event, the timeline age, and a more detailed explanation for the exact position of the minute hand.</p>
+        <p class="hint" id="minuteHint">Minute grid: 60 positions. Every minute equals 2.5 million years in the 150 Ma view.</p>
+        <ul class="eventList" id="eventList"></ul>
+      </div>
+
+      <div class="hint">
+        Extra features added: animated glow, minute labels, event markers on the dial, hover tooltips, click-to-jump event list, zoom mode, autoplay, keyboard shortcuts (space, R, S, Z), and a cleaner modern glassmorphism look.
+      </div>
+    </aside>
+  </main>
+
+  <footer class="bottombar">
+    <div class="hint">Keyboard: Space = play/pause · R = reset · S = snap on/off · Z = zoom toggle</div>
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i> major event</span>
+      <span><i style="background:var(--accent4)"></i> current minute</span>
+      <span><i style="background:var(--accent3)"></i> active highlight</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const TOTAL_150 = 150;
+  const TOTAL_ZOOM = 1;
+  const MINUTES = 60;
+  const SECONDS = 720;
+  const CENTER = { x: 400, y: 400 };
+  const RADIUS = 320;
+  const HAND_LEN = 250;
+
+  const state = {
+    totalMyr: TOTAL_150,
+    running: false,
+    snap: false,
+    zoom: false,
+    angleDeg: -90,
+    progressMin: 0,
+    lastTs: performance.now()
+  };
+
+  const events = [
+    {
+      mya: 150.0,
+      name: 'Start of the window',
+      short: '150 million years ago',
+      detail: 'The clock begins here. In the full Earth story, this is a tiny late chapter, but it still includes some of the most dramatic evolutionary changes: dinosaurs, birds, flowering plants, mass extinction, mammals, and humans.',
+      color: '#7dd3fc',
+      era: 'Late Mesozoic'
+    },
+    {
+      mya: 145.0,
+      name: 'First birds',
+      short: 'Birds emerge from theropod ancestors',
+      detail: 'The earliest birds evolved from small feathered theropod dinosaurs. This marks a major transition in flight, feathers, and body plan evolution.',
+      color: '#93c5fd',
+      era: 'Late Jurassic'
+    },
+    {
+      mya: 140.0,
+      name: 'Flowering plants expand',
+      short: 'Angiosperms become important',
+      detail: 'Flowering plants diversify and reshape terrestrial ecosystems. Their rise changes insect interactions, food webs, and the structure of many habitats.',
+      color: '#f9a8d4',
+      era: 'Early Cretaceous'
+    },
+    {
+      mya: 130.0,
+      name: 'Dinosaur diversification',
+      short: 'Large dinosaur groups flourish',
+      detail: 'Many dinosaur lineages diversify across the continents. Herbi­vores, predators, and armored forms become abundant and ecologically dominant.',
+      color: '#86efac',
+      era: 'Early Cretaceous'
+    },
+    {
+      mya: 110.0,
+      name: 'Marine reptile decline',
+      short: 'Ocean ecosystems shift',
+      detail: 'Marine ecosystems continue to evolve, with important changes in ammonites, marine reptiles, and plankton communities.',
+      color: '#67e8f9',
+      era: 'Cretaceous seas'
+    },
+    {
+      mya: 100.0,
+      name: 'Insect diversity blooms',
+      short: 'Pollinators and plant-insect networks expand',
+      detail: 'Insects diversify alongside flowering plants, strengthening ecological feedback between pollination, herbivory, and plant evolution.',
+      color: '#fde68a',
+      era: 'Mid Cretaceous'
+    },
+    {
+      mya: 90.0,
+      name: 'Warm greenhouse world',
+      short: 'High sea levels and warm climate',
+      detail: 'Earth experiences a warm greenhouse climate with high sea levels and extensive shallow seas, which support rich marine biodiversity.',
+      color: '#fbcfe8',
+      era: 'Mid Cretaceous'
+    },
+    {
+      mya: 80.0,
+      name: 'More modern ecosystems',
+      short: 'Several modern lineages rise',
+      detail: 'Many plant and animal lineages begin to look increasingly modern, even though dinosaurs still dominate land ecosystems.',
+      color: '#a7f3d0',
+      era: 'Late Cretaceous'
+    },
+    {
+      mya: 70.0,
+      name: 'Late dinosaur age',
+      short: 'Dinosaurs remain widespread',
+      detail: 'Just before the end-Cretaceous crisis, dinosaurs still occupy a wide range of ecological roles on land.',
+      color: '#fda4af',
+      era: 'Late Cretaceous'
+    },
+    {
+      mya: 66.0,
+      name: 'Mass extinction boundary',
+      short: 'Non-avian dinosaurs disappear',
+      detail: 'A major asteroid impact near Chicxulub, together with climate disruption, causes one of the most famous mass extinctions in Earth history.',
+      color: '#fb7185',
+      era: 'K–Pg boundary'
+    },
+    {
+      mya: 63.0,
+      name: 'Mammalian radiation',
+      short: 'Mammals diversify rapidly',
+      detail: 'With dinosaurs gone, mammals expand into many ecological niches. Body size, diet, and habitat diversity increase dramatically.',
+      color: '#fbbf24',
+      era: 'Paleogene'
+    },
+    {
+      mya: 55.0,
+      name: 'Early primates',
+      short: 'Primate ancestors appear',
+      detail: 'Early primates emerge in warm forests. Their adaptations support grasping, climbing, and increasing visual specialization.',
+      color: '#fcd34d',
+      era: 'Early Eocene'
+    },
+    {
+      mya: 40.0,
+      name: 'Grassland precursors',
+      short: 'Open habitats expand gradually',
+      detail: 'Vegetation changes encourage the spread of more open habitats, shaping the future of grazing animals and predators.',
+      color: '#bef264',
+      era: 'Eocene–Oligocene'
+    },
+    {
+      mya: 23.0,
+      name: 'Grasslands expand',
+      short: 'Cooler, drier ecosystems spread',
+      detail: 'Grasslands become more widespread, altering herbivore teeth, body size, and migration behavior across many groups.',
+      color: '#4ade80',
+      era: 'Miocene'
+    },
+    {
+      mya: 10.0,
+      name: 'Early hominin context',
+      short: 'Human line begins separating',
+      detail: 'The lineage leading to humans continues to diverge from other apes over millions of years, setting the stage for later hominins.',
+      color: '#60a5fa',
+      era: 'Late Miocene'
+    },
+    {
+      mya: 7.0,
+      name: 'Early hominins',
+      short: 'Bipedal ancestors appear',
+      detail: 'Early hominins appear in Africa. Bipedal locomotion becomes an increasingly important part of human ancestry.',
+      color: '#38bdf8',
+      era: 'Late Miocene'
+    },
+    {
+      mya: 2.8,
+      name: 'Genus Homo',
+      short: 'The human genus emerges',
+      detail: 'The genus Homo appears, bringing new trends in brain size, tool use, and behavioral complexity.',
+      color: '#22d3ee',
+      era: 'Pleistocene threshold'
+    },
+    {
+      mya: 0.3,
+      name: 'Homo sapiens',
+      short: 'Modern humans arise',
+      detail: 'Anatomically modern humans appear extremely late in this window, only a tiny fraction before the present moment.',
+      color: '#ffffff',
+      era: 'Late Pleistocene'
+    },
+    {
+      mya: 0.005,
+      name: 'Recorded history',
+      short: 'Writing and civilization',
+      detail: 'Recorded history occupies the final sliver of the timeline. Compared with the full 150-million-year window, civilization is almost invisible on the clock.',
+      color: '#c084fc',
+      era: 'Very recent'
+    }
+  ];
+
+  const el = {
+    ticks: document.getElementById('ticks'),
+    eventLayer: document.getElementById('eventLayer'),
+    handLayer: document.getElementById('handLayer'),
+    title: document.getElementById('title'),
+    desc: document.getElementById('desc'),
+    clockReadout: document.getElementById('clockReadout'),
+    subClock: document.getElementById('subClock'),
+    myaReadout: document.getElementById('myaReadout'),
+    nearestReadout: document.getElementById('nearestReadout'),
+    eventName: document.getElementById('eventName'),
+    eventDetail: document.getElementById('eventDetail'),
+    minuteHint: document.getElementById('minuteHint'),
+    eventList: document.getElementById('eventList'),
+    playBtn: document.getElementById('playBtn'),
+    resetBtn: document.getElementById('resetBtn'),
+    snapBtn: document.getElementById('snapBtn'),
+    zoomBtn: document.getElementById('zoomBtn'),
+    speedRange: document.getElementById('speedRange'),
+    clockWrap: document.getElementById('clockWrap')
+  };
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function deg2rad(deg) { return deg * Math.PI / 180; }
+  function rad2deg(rad) { return rad * 180 / Math.PI; }
+  function normDeg(deg) { return (deg % 360 + 360) % 360; }
+
+  function minutesFromAngle(deg) {
+    const a = normDeg(deg + 90);
+    return (a / 360) * 60;
+  }
+
+  function angleFromMinutes(min) {
+    return (min / 60) * 360 - 90;
+  }
+
+  function myaFromMinutes(min) {
+    return state.totalMyr - (min / 60) * state.totalMyr;
+  }
+
+  function minutesFromMya(mya) {
+    return ((state.totalMyr - mya) / state.totalMyr) * 60;
+  }
+
+  function formatClock(min) {
+    const totalSeconds = min * 60;
+    const h = Math.floor(totalSeconds / 3600) % 12 || 12;
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = Math.floor(totalSeconds % 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+
+  function formatMya(mya) {
+    if (mya >= 1) return `${mya.toFixed(3)} Ma`;
+    return `${(mya * 1000).toFixed(0)} ka`;
+  }
+
+  function closestEvent(mya) {
+    let best = events[0];
+    let bestDist = Math.abs(events[0].mya - mya);
+    for (const ev of events) {
+      const d = Math.abs(ev.mya - mya);
+      if (d < bestDist) { best = ev; bestDist = d; }
+    }
+    return { event: best, dist: bestDist };
+  }
+
+  function createSVG(tag, attrs = {}) {
+    const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    return n;
+  }
+
+  function drawClock() {
+    el.ticks.innerHTML = '';
+    el.eventLayer.innerHTML = '';
+    el.handLayer.innerHTML = '';
+
+    // Minute ticks and hour numbers (12-hour clock style)
+    for (let i = 0; i < 60; i++) {
+      const min = i;
+      const ang = angleFromMinutes(min);
+      const isMajor = i % 5 === 0;
+      const isHour = i % 5 === 0;
+      const r1 = isMajor ? 285 : 300;
+      const r2 = isMajor ? 316 : 308;
+      const x1 = CENTER.x + Math.cos(deg2rad(ang)) * r1;
+      const y1 = CENTER.y + Math.sin(deg2rad(ang)) * r1;
+      const x2 = CENTER.x + Math.cos(deg2rad(ang)) * r2;
+      const y2 = CENTER.y + Math.sin(deg2rad(ang)) * r2;
+
+      el.ticks.appendChild(createSVG('line', {
+        x1, y1, x2, y2,
+        class: isMajor ? 'majorTick' : 'minorTick',
+        'stroke-width': isMajor ? '2.4' : '1.1',
+        'stroke-linecap': 'round'
+      }));
+
+      if (isHour) {
+        const label = (i / 5) % 12 === 0 ? 12 : (i / 5) % 12;
+        const tx = CENTER.x + Math.cos(deg2rad(ang)) * 245;
+        const ty = CENTER.y + Math.sin(deg2rad(ang)) * 245 + 5;
+        const txt = createSVG('text', {
+          x: tx, y: ty,
+          'text-anchor': 'middle',
+          class: 'hourNumber'
+        });
+        txt.textContent = label;
+        el.ticks.appendChild(txt);
+      }
+    }
+
+    // Minute labels (subtle, every 5 minutes)
+    for (let i = 0; i < 60; i += 5) {
+      const ang = angleFromMinutes(i);
+      const tx = CENTER.x + Math.cos(deg2rad(ang)) * 348;
+      const ty = CENTER.y + Math.sin(deg2rad(ang)) * 348 + 4;
+      const txt = createSVG('text', {
+        x: tx, y: ty,
+        'text-anchor': 'middle',
+        class: 'minuteLabel'
+      });
+      txt.textContent = i === 0 ? '00' : String(i).padStart(2, '0');
+      el.ticks.appendChild(txt);
+    }
+
+    // Event pins
+    events.forEach(ev => {
+      const min = minutesFromMya(ev.mya);
+      const ang = angleFromMinutes(min);
+      const rOuter = 303;
+      const rInner = 263;
+      const x1 = CENTER.x + Math.cos(deg2rad(ang)) * rOuter;
+      const y1 = CENTER.y + Math.sin(deg2rad(ang)) * rOuter;
+      const x2 = CENTER.x + Math.cos(deg2rad(ang)) * rInner;
+      const y2 = CENTER.y + Math.sin(deg2rad(ang)) * rInner;
+      const dotR = ev.mya < 1 ? 7 : 6;
+
+      const line = createSVG('line', {
+        x1, y1, x2, y2,
+        class: 'eventLine liveGlow',
+        stroke: ev.color
+      });
+      const dot = createSVG('circle', {
+        cx: x2, cy: y2, r: dotR,
+        class: 'eventDot liveGlow',
+        fill: ev.color,
+        'data-mya': ev.mya,
+        'data-name': ev.name
+      });
+      dot.style.cursor = 'pointer';
+      dot.addEventListener('mouseenter', () => updateUI(ev.mya, true));
+      dot.addEventListener('click', () => updateUI(ev.mya, true));
+
+      const label = createSVG('text', {
+        x: CENTER.x + Math.cos(deg2rad(ang)) * 350,
+        y: CENTER.y + Math.sin(deg2rad(ang)) * 350,
+        class: 'eventLabel',
+        'text-anchor': Math.cos(deg2rad(ang)) > 0 ? 'start' : 'end',
+        'dominant-baseline': 'middle'
+      });
+      label.textContent = ev.name;
+
+      el.eventLayer.appendChild(line);
+      el.eventLayer.appendChild(dot);
+      el.eventLayer.appendChild(label);
+    });
+
+    // Hand
+    const shadow = createSVG('line', {
+      x1: CENTER.x, y1: CENTER.y, x2: CENTER.x, y2: CENTER.y - HAND_LEN,
+      stroke: 'rgba(0,0,0,0.35)', 'stroke-width': 20, 'stroke-linecap': 'round',
+      transform: `translate(5,7)`, class: 'needleGlow'
+    });
+    const hand = createSVG('line', {
+      x1: CENTER.x, y1: CENTER.y, x2: CENTER.x, y2: CENTER.y - HAND_LEN,
+      stroke: 'url(#handGrad)', 'stroke-width': 10, 'stroke-linecap': 'round',
+      class: 'needleGlow'
+    });
+    const cap = createSVG('circle', { cx: CENTER.x, cy: CENTER.y, r: 18, fill: '#f8fbff', class: 'needleGlow' });
+    const cap2 = createSVG('circle', { cx: CENTER.x, cy: CENTER.y, r: 7, fill: '#0b1220' });
+    el.handLayer.appendChild(shadow);
+    el.handLayer.appendChild(hand);
+    el.handLayer.appendChild(cap);
+    el.handLayer.appendChild(cap2);
+
+    setHand(state.angleDeg);
+  }
+
+  function setHand(deg) {
+    state.angleDeg = deg;
+    el.handLayer.setAttribute('transform', `rotate(${deg} ${CENTER.x} ${CENTER.y})`);
+  }
+
+  function eventListHTML(currentMya) {
+    const nearest = closestEvent(currentMya).event;
+    el.eventList.innerHTML = '';
+    [...events].sort((a,b) => b.mya - a.mya).forEach(ev => {
+      const li = document.createElement('li');
+      if (ev.name === nearest.name) li.classList.add('active');
+      li.innerHTML = `<span class="name">${ev.name}</span><span class="age">${formatMya(ev.mya)}</span>`;
+      li.title = ev.detail;
+      li.addEventListener('click', () => updateUI(ev.mya, true));
+      el.eventList.appendChild(li);
+    });
+  }
+
+  function updateUI(mya, fromEventClick = false) {
+    mya = clamp(mya, 0, state.totalMyr);
+    const min = minutesFromMya(mya);
+    const deg = angleFromMinutes(min);
+    setHand(deg);
+
+    const c = formatClock(min);
+    el.clockReadout.textContent = c;
+    el.subClock.textContent = `${formatMya(mya)} ago`;
+    el.myaReadout.textContent = formatMya(mya);
+
+    const { event, dist } = closestEvent(mya);
+    el.nearestReadout.textContent = `Nearest event: ${event.name}`;
+    el.title.textContent = event.name;
+    el.desc.textContent = event.detail;
+    el.eventName.textContent = event.name;
+    el.eventDetail.textContent = `${event.detail} ${dist < 0.75 ? 'This is the exact neighborhood of the selected minute.' : `Nearest major event is ${dist.toFixed(2)} million years away.`}`;
+    el.minuteHint.textContent = `Minute grid: 60 positions. Each minute equals ${(state.totalMyr / 60).toFixed(3)} million years in the current view. ${state.zoom ? 'Zoom mode is ON, so details are compressed into the last 1 million years window.' : 'Zoom mode is OFF, so the full 150 million years are visible.'}`;
+
+    eventListHTML(mya);
+
+    if (state.snap && !fromEventClick) {
+      const snapThreshold = Math.min(1.5, state.totalMyr / 60 * 0.55);
+      if (dist <= snapThreshold) {
+        window.requestAnimationFrame(() => updateUI(event.mya, true));
+      }
+    }
+  }
+
+  function pointerToMya(evt) {
+    const rect = el.clockWrap.getBoundingClientRect();
+    const x = (evt.clientX - rect.left) / rect.width * 800;
+    const y = (evt.clientY - rect.top) / rect.height * 800;
+    const dx = x - CENTER.x;
+    const dy = y - CENTER.y;
+    const deg = rad2deg(Math.atan2(dy, dx));
+    const min = minutesFromAngle(deg);
+    return myaFromMinutes(min);
+  }
+
+  // 60 minute snapping when using shift? not necessary but can be made with snap toggle.
+  let dragging = false;
+  el.clockWrap.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    el.clockWrap.setPointerCapture(e.pointerId);
+    state.running = false;
+    el.playBtn.textContent = 'Play';
+    updateUI(pointerToMya(e));
+  });
+  el.clockWrap.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    updateUI(pointerToMya(e));
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => {
+    el.clockWrap.addEventListener(ev, () => { dragging = false; });
+  });
+
+  el.playBtn.addEventListener('click', () => {
+    state.running = !state.running;
+    el.playBtn.textContent = state.running ? 'Pause' : 'Play';
+    state.lastTs = performance.now();
+  });
+
+  el.resetBtn.addEventListener('click', () => {
+    state.running = false;
+    el.playBtn.textContent = 'Play';
+    updateUI(state.totalMyr);
+  });
+
+  el.snapBtn.addEventListener('click', () => {
+    state.snap = !state.snap;
+    el.snapBtn.textContent = `Snap: ${state.snap ? 'On' : 'Off'}`;
+    el.snapBtn.classList.toggle('active', state.snap);
+  });
+
+  el.zoomBtn.addEventListener('click', () => {
+    state.zoom = !state.zoom;
+    state.totalMyr = state.zoom ? TOTAL_ZOOM : TOTAL_150;
+    el.zoomBtn.textContent = `Zoom: ${state.zoom ? '1 Ma' : '150 Ma'}`;
+    drawClock();
+    updateUI(state.totalMyr);
+  });
+
+  el.speedRange.addEventListener('input', () => {});
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === ' ') {
+      e.preventDefault();
+      el.playBtn.click();
+    } else if (e.key.toLowerCase() === 'r') {
+      el.resetBtn.click();
+    } else if (e.key.toLowerCase() === 's') {
+      el.snapBtn.click();
+    } else if (e.key.toLowerCase() === 'z') {
+      el.zoomBtn.click();
+    }
+  });
+
+  function animate(now) {
+    if (state.running) {
+      const dt = (now - state.lastTs) / 1000;
+      state.lastTs = now;
+      const speed = parseFloat(el.speedRange.value);
+      const currentMin = minutesFromMya(parseFloat(el.myaReadout.textContent));
+      let nextMin = currentMin + dt * speed * 0.45;
+      if (nextMin > 60) nextMin -= 60;
+      updateUI(myaFromMinutes(nextMin));
+    }
+    requestAnimationFrame(animate);
+  }
+
+  drawClock();
+  updateUI(state.totalMyr);
+  requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
